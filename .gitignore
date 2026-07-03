@@ -1,0 +1,21 @@
+# Ambiente e segredos
+.venv/
+.env
+__pycache__/
+*.pyc
+
+# Dados brutos (grandes demais pro GitHub) e artefatos gerados
+Books_rating.csv
+books_data.csv
+data/raw/
+data/processed/
+chroma_db/
+
+# Assistente / IDE
+.claude/
+.vscode/
+.ipynb_checkpoints/
+
+# SO
+.DS_Store
+Thumbs.db
