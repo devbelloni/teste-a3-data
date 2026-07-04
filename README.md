@@ -121,7 +121,26 @@ docker compose run --rm pipeline python -m scripts.run_pipeline --skip-rag
 O cache do modelo de embeddings (Hugging Face) fica num volume nomeado
 (`hf_cache`), então não é rebaixado a cada `docker compose up`.
 
-### 5. Notebooks
+### 5. Testes da API (Postman)
+
+`postman/A3Data_Desafio_Tecnico.postman_collection.json` + a environment
+`postman/A3Data_local.postman_environment.json` (variável `base_url`, aponta
+para `http://localhost:8000` — funciona igual com a API local ou em Docker).
+
+Importe os dois arquivos no Postman e rode a collection (ou "Run collection"
+pra rodar todos de uma vez). Cobre os 3 endpoints, casos de sucesso e casos de
+erro esperados (404 para livro/autor/filtro inexistente), com asserções sobre
+o formato da resposta.
+
+Também dá pra rodar via linha de comando com o [newman](https://www.npmjs.com/package/newman)
+(CLI oficial do Postman), sem abrir o Postman:
+
+```bash
+npx newman run postman/A3Data_Desafio_Tecnico.postman_collection.json \
+  -e postman/A3Data_local.postman_environment.json
+```
+
+### 6. Notebooks
 
 ```bash
 jupyter notebook notebooks/

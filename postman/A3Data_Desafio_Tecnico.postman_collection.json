@@ -1,0 +1,229 @@
+{
+  "info": {
+    "name": "A3Data - Desafio Técnico (Ferramenta de Análise de Reviews)",
+    "description": "Testes de fumaça (smoke tests) para a API FastAPI do desafio técnico A3Data — RAG, sumarização via LLM e ranking de reviewers relevantes. Use com a environment 'A3Data - local' (variável {{base_url}}).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" }
+  ],
+  "item": [
+    {
+      "name": "Status da API",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/", "host": ["{{base_url}}"], "path": [""] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Perguntar (RAG) - fantasia",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pergunta\": \"quais livros de fantasia com magos os leitores mais elogiaram?\",\n  \"k\": 5\n}"
+        },
+        "url": { "raw": "{{base_url}}/perguntar", "host": ["{{base_url}}"], "path": ["perguntar"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('tem resposta em texto', () => pm.expect(body.answer).to.be.a('string').and.not.empty);",
+              "pm.test('tem query reescrita', () => pm.expect(body.search_query_used).to.be.a('string').and.not.empty);",
+              "pm.test('tem fontes citadas', () => pm.expect(body.sources).to.be.an('array').with.length.greaterThan(0));",
+              "pm.test('fonte tem os campos esperados', () => {",
+              "  const s = body.sources[0];",
+              "  pm.expect(s).to.have.all.keys('title', 'author', 'category', 'avg_score');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Perguntar (RAG) - negócios",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pergunta\": \"quais livros de negocios os leitores mais recomendam?\",\n  \"k\": 4\n}"
+        },
+        "url": { "raw": "{{base_url}}/perguntar", "host": ["{{base_url}}"], "path": ["perguntar"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('sources refletem k pedido (<= k)', () => pm.expect(body.sources.length).to.be.at.most(4));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resumo por Livro - The Hobbit",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/resumo/livro/The Hobbit",
+          "host": ["{{base_url}}"],
+          "path": ["resumo", "livro", "The Hobbit"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('tem resumo gerado pelo LLM', () => pm.expect(body.resumo).to.be.a('string').and.not.empty);",
+              "pm.test('tem nota média numérica', () => pm.expect(body.nota_media).to.be.a('number'));",
+              "pm.test('nota média está entre 1 e 5', () => {",
+              "  pm.expect(body.nota_media).to.be.at.least(1);",
+              "  pm.expect(body.nota_media).to.be.at.most(5);",
+              "});",
+              "pm.test('n_reviews_total >= n_reviews_usadas', () => pm.expect(body.n_reviews_total).to.be.at.least(body.n_reviews_usadas));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resumo por Livro - inexistente (404 esperado)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/resumo/livro/Este Livro Nao Existe De Verdade Xyz123",
+          "host": ["{{base_url}}"],
+          "path": ["resumo", "livro", "Este Livro Nao Existe De Verdade Xyz123"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 404 para livro inexistente', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resumo por Autor - J. R. R. Tolkien",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/resumo/autor/J. R. R. Tolkien",
+          "host": ["{{base_url}}"],
+          "path": ["resumo", "autor", "J. R. R. Tolkien"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('tem resumo gerado pelo LLM', () => pm.expect(body.resumo).to.be.a('string').and.not.empty);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviewers Relevantes - por gênero",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/reviewers-relevantes?genero=Fiction&top_n=5",
+          "host": ["{{base_url}}"],
+          "path": ["reviewers-relevantes"],
+          "query": [
+            { "key": "genero", "value": "Fiction" },
+            { "key": "top_n", "value": "5" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('retorna no máximo top_n resultados', () => pm.expect(body.resultados.length).to.be.at.most(5));",
+              "pm.test('resultados ordenados por relevance_score desc', () => {",
+              "  const scores = body.resultados.map(r => r.relevance_score);",
+              "  const sorted = [...scores].sort((a, b) => b - a);",
+              "  pm.expect(scores).to.eql(sorted);",
+              "});",
+              "pm.test('cada resultado tem os campos esperados', () => {",
+              "  const r = body.resultados[0];",
+              "  pm.expect(r).to.include.all.keys('profileName', 'n_reviews', 'specificity', 'relevance_score');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviewers Relevantes - filtro sem resultado (404 esperado)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/reviewers-relevantes?genero=GeneroInexistenteXyz123",
+          "host": ["{{base_url}}"],
+          "path": ["reviewers-relevantes"],
+          "query": [{ "key": "genero", "value": "GeneroInexistenteXyz123" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 404 quando não há resultados', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
