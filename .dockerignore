@@ -1,0 +1,20 @@
+.venv/
+.git/
+.env
+*.pdf
+
+# Dados grandes — não devem entrar no contexto de build, são montados como volume
+Books_rating.csv
+books_data.csv
+data/
+chroma_db/
+
+# Não usados em runtime, não precisam ir pra imagem
+notebooks/
+outputs/
+slides/
+docs/
+.ipynb_checkpoints/
+
+__pycache__/
+*.pyc

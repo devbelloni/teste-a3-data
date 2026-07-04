@@ -78,6 +78,17 @@ python -m src.keywords           # smoke test de keywords por gênero
 python -m app.rag.ingest         # embeddings + indexação no ChromaDB
 ```
 
+**Ou tudo de uma vez** (útil quando `Books_rating.csv`/`books_data.csv` mudarem —
+nova exportação, atualização periódica etc.): `python -m scripts.run_pipeline`
+roda as 4 etapas essenciais em sequência (`--skip-rag` pula a reindexação, que é
+a etapa mais lenta). A reindexação no ChromaDB é idempotente — reexecutar não
+duplica nem deixa livros órfãos, ela recria a coleção a partir dos dados atuais.
+
+Esse script pode virar um job agendado (Windows Task Scheduler, cron, ou um
+workflow de CI/CD como GitHub Actions/Airflow em produção) para rodar sempre
+que os CSVs de origem forem substituídos — é justamente o próximo passo do
+roadmap de "ingestão incremental" (ver `docs/plano.md`).
+
 ### 4. API
 
 ```bash
@@ -85,6 +96,30 @@ uvicorn app.main:app --reload
 ```
 
 Documentação interativa (Swagger): http://127.0.0.1:8000/docs
+
+### 4b. Ou via Docker (alternativa ao passo 4)
+
+Requer que `data/processed/` e `chroma_db/` já existam localmente (passo 3
+rodado ao menos uma vez fora do Docker) — a API sobe servindo esses dados via
+bind mount, sem precisar reconstruir a imagem quando os dados mudarem:
+
+```bash
+docker compose up -d api          # sobe a API em http://localhost:8000
+docker compose logs -f api        # acompanhar logs
+docker compose down                # parar
+```
+
+Rodar o pipeline completo dentro do Docker (equivalente ao passo 3), útil se
+`Books_rating.csv`/`books_data.csv` mudarem e você quiser regenerar tudo sem
+precisar do ambiente Python local:
+
+```bash
+docker compose run --rm pipeline                       # roda tudo
+docker compose run --rm pipeline python -m scripts.run_pipeline --skip-rag
+```
+
+O cache do modelo de embeddings (Hugging Face) fica num volume nomeado
+(`hf_cache`), então não é rebaixado a cada `docker compose up`.
 
 ### 5. Notebooks
 

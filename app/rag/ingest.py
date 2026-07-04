@@ -8,6 +8,7 @@ suficiente para um documento significativo). Em produção, a ingestão cobriria
 catálogo completo, de forma incremental.
 """
 
+import hashlib
 from pathlib import Path
 
 import pandas as pd
@@ -38,6 +39,12 @@ def _clean_str(value, default: str = "") -> str:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return default
     return str(value).strip()
+
+
+def doc_id_for_title(title: str) -> str:
+    """ID determinístico por título — permite reindexar (upsert) sem duplicar
+    quando o pipeline roda de novo sobre dados atualizados."""
+    return hashlib.md5(title.encode("utf-8")).hexdigest()
 
 
 def build_book_documents(df: pd.DataFrame, min_reviews: int = MIN_REVIEWS) -> list[Document]:
@@ -104,10 +111,24 @@ def ingest(
         persist_directory=str(chroma_dir),
     )
 
-    print(f"Indexando {len(docs):,} documentos em lotes de {BATCH_SIZE}...")
+    if vectorstore._collection.count() > 0:
+        print(f"  Coleção existente com {vectorstore._collection.count():,} documentos — "
+              f"recriando do zero para refletir os dados atuais (evita duplicatas e livros órfãos).")
+        vectorstore.delete_collection()
+        vectorstore = Chroma(
+            collection_name=COLLECTION_NAME,
+            embedding_function=embeddings,
+            persist_directory=str(chroma_dir),
+        )
+
+    ids = [doc_id_for_title(d.metadata["title"]) for d in docs]
+
+    print(f"Indexando {len(docs):,} documentos em lotes de {BATCH_SIZE} "
+          f"(IDs determinísticos por título — reindexar atualiza em vez de duplicar)...")
     for i in range(0, len(docs), BATCH_SIZE):
         batch = docs[i : i + BATCH_SIZE]
-        vectorstore.add_documents(batch)
+        batch_ids = ids[i : i + BATCH_SIZE]
+        vectorstore.add_documents(batch, ids=batch_ids)
         print(f"  {min(i + BATCH_SIZE, len(docs)):,} / {len(docs):,}")
 
     print(f"\nÍndice ChromaDB salvo em {chroma_dir}")
