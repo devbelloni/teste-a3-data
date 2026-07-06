@@ -11,6 +11,9 @@ data/raw/
 data/processed/
 chroma_db/
 
+# Apresentação (mantida só localmente)
+slides/
+
 # Assistente / IDE
 .claude/
 .vscode/
