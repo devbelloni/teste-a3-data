@@ -12,15 +12,26 @@ estourar limites de taxa do tier gratuito.
 """
 
 import time
+from functools import lru_cache
 
 import pandas as pd
 from langchain_core.messages import HumanMessage
 from rouge_score import rouge_scorer
+from sentence_transformers import SentenceTransformer, util
 
 from app.core.llm import get_llm
 from src.config import CONFIG
 
 _CFG = CONFIG["metrics"]
+_RAG_CFG = CONFIG["rag"]
+
+
+@lru_cache
+def _get_embedder() -> SentenceTransformer:
+    """Reaproveita o mesmo modelo de embeddings do RAG (all-MiniLM-L6-v2) para
+    medir similaridade semântica — evita baixar um segundo modelo (ex. BERTScore)
+    só para esta avaliação."""
+    return SentenceTransformer(_RAG_CFG["embedding_model"])
 
 ONE_LINE_SUMMARY_PROMPT = (
     "Resuma esta review de livro em UMA frase curta em inglês, no estilo de um "
@@ -37,15 +48,24 @@ SENTIMENT_LABEL_PROMPT = (
 def evaluate_summarization_rouge(
     df: pd.DataFrame, n_samples: int = _CFG["rouge_n_samples"], seed: int = 42
 ) -> dict:
+    """ROUGE (sobreposição de palavras) + similaridade semântica (cosseno entre
+    embeddings) — ROUGE sozinho penaliza parafraseamento correto (mesmo
+    significado, palavras diferentes); a similaridade semântica complementa
+    isso medindo significado, não só overlap léxico."""
     sample = df.sample(n=min(n_samples, len(df)), random_state=seed)
     scorer = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
     llm = get_llm(temperature=0.0)
+    embedder = _get_embedder()
 
     rows = []
     for r in sample.itertuples():
         prompt = ONE_LINE_SUMMARY_PROMPT.format(example=r.summary, text=str(r.text)[:1500])
         generated = llm.invoke([HumanMessage(content=prompt)]).content.strip()
         scores = scorer.score(str(r.summary), generated)
+
+        emb = embedder.encode([str(r.summary), generated], convert_to_tensor=True)
+        semantic_similarity = util.cos_sim(emb[0], emb[1]).item()
+
         rows.append(
             {
                 "real_summary": r.summary,
@@ -53,6 +73,7 @@ def evaluate_summarization_rouge(
                 "rouge1_f": scores["rouge1"].fmeasure,
                 "rouge2_f": scores["rouge2"].fmeasure,
                 "rougeL_f": scores["rougeL"].fmeasure,
+                "semantic_similarity": semantic_similarity,
             }
         )
         time.sleep(0.3)
@@ -63,6 +84,7 @@ def evaluate_summarization_rouge(
         "rouge1_f_mean": results["rouge1_f"].mean(),
         "rouge2_f_mean": results["rouge2_f"].mean(),
         "rougeL_f_mean": results["rougeL_f"].mean(),
+        "semantic_similarity_mean": results["semantic_similarity"].mean(),
     }
     return {"summary": summary, "details": results}
 

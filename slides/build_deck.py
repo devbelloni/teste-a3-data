@@ -365,7 +365,7 @@ def build():
             "Abordagem: para cada livro/autor, o LLM (Groq/Llama 3.3 70B) sintetiza as reviews mais substantivas em um resumo estruturado — sentimento geral, elogios, críticas e uma citação representativa.",
             "Disponível como endpoint da API: GET /resumo/livro/{título} e GET /resumo/autor/{autor} — geração sob demanda, não pré-computada, sempre com as reviews mais recentes da base.",
             "Exemplo real (The Hobbit, 1.450 reviews na amostra, nota média 4,65): \"Sentimento geral extremamente positivo... elogiam a criatividade e a construção do mundo de Middle-earth... críticas mencionam a lentidão do início\".",
-            "Avaliação objetiva: ROUGE-L de 0,21 comparando resumos de review individual contra o resumo humano real já presente no dataset — indicador consistente, não é meta a maximizar isoladamente (resumos humanos são estilizados e variam muito entre si).",
+            "Avaliação objetiva: ROUGE-L de 0,19 comparando resumos de review individual contra o resumo humano real já presente no dataset — mas similaridade semântica (embeddings) de 0,44, bem mais alta, confirmando que o resumo captura o significado mesmo usando palavras diferentes do resumo humano (que é estilizado, não descritivo).",
             "Produção: cache dos resumos mais acessados, e opção de resumo incremental conforme novas reviews chegam.",
         ],
     )
@@ -391,7 +391,7 @@ def build():
     add_bullets_slide(
         prs, "H. MÉTRICAS DE QUALIDADE", "Leitura dos números",
         [
-            "Sumarização — ROUGE-1/2/L (0,21 / 0,05 / 0,21): comparação objetiva contra resumo humano real já presente no dataset (referência gold), não uma amostra sintética.",
+            "Sumarização — ROUGE-1/2/L (0,19 / 0,11 / 0,19) mede sobreposição de palavras contra o resumo humano real (referência gold); similaridade semântica via embeddings (0,44) mede significado — as duas juntas mostram que o resumo é fiel mesmo quando ROUGE sozinho pareceria baixo.",
             "RAG — Precisão@5 de 80% em 7 queries de teste cobrindo gêneros distintos (fantasia, negócios, religião, história, tecnologia, culinária, biografia).",
             "Sentimento — no recorte mais difícil (12,5% da amostra, onde o texto \"engana\" o léxico clássico VADER), o LLM acerta 63,3% das vezes contra 0% do VADER nesse mesmo recorte por construção.",
             "Todas as métricas são reprodutíveis: notebooks/02_avaliacao_qualidade.ipynb roda do zero e recalcula os três números.",
