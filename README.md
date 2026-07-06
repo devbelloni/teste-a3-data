@@ -163,8 +163,8 @@ financeiro) estão centralizados em [`config.yaml`](config.yaml), carregado por
 |---|---|
 | Amostra | 198.924 reviews (de ~3M), 87% com autor identificado, 82% com gênero |
 | Sentimento (VADER) | 75,1% de acurácia geral vs. nota real; cai para 0% no recorte "difícil" (12,5% da amostra) |
-| Sentimento (LLM) | 63,3% de acurácia no mesmo recorte "difícil" — ganho claro sobre NLP clássico |
-| Sumarização (LLM) | ROUGE-1/2/L de 0,19 / 0,11 / 0,19 (overlap léxico) vs. resumo humano real; similaridade semântica (embeddings) de 0,44 — confirma que o significado é capturado mesmo com ROUGE baixo |
+| Sentimento (LLM) | 60% de acurácia no mesmo recorte "difícil" (onde o VADER acerta 0% por definição) — ganho real sobre NLP clássico |
+| Sumarização (LLM) | ROUGE-1/2/L de 0,19 / 0,11 / 0,19 (overlap léxico) vs. resumo humano real; similaridade semântica (embeddings) de 0,46 — confirma que o significado é capturado mesmo com ROUGE baixo |
 | RAG | Precisão@5 média de 80% (7 queries de teste, 13.661 livros indexados) |
 | Impacto financeiro | ~96,7% de redução de custo por ciclo de análise (premissas explícitas em `config.yaml`) |
 
